@@ -40,23 +40,10 @@ class _ChatDetailState extends State<ChatDetail> {
     super.initState();
     getChatHistroy();
     _connectSocket01();
-    //监听滚动事件，打印滚动位置
-//    _scrollController.addListener(() {
-//      print(_controller.offset); //打印滚动位置
-//      if (_controller.offset < 1000 && showToTopBtn) {
-//        setState(() {
-//          showToTopBtn = false;
-//        });
-//      } else if (_controller.offset >= 1000 && showToTopBtn == false) {
-//        setState(() {
-//          showToTopBtn = true;
-//        });
-//      }
-//    });
-//    msgList = [
-//      {"sender":"5f9294cce98d8c4d28ca3def","receiver":"5f9269f5f6890d1246cee96d","msg":"77","receivername":"Jack","sendername":"Jack"},
-//      {"sender":"5f9269f5f6890d1246cee96d","receiver":"5f9294cce98d8c4d28ca3def","msg":"77","receivername":"Jack","sendername":"Jack"}
-//    ];
+    //进入聊天详情页清除未读消息
+    new Future.delayed(Duration(seconds: 1),(){
+      socketIO.sendMessage("updataunread", json.encode(({"sender":Global.profile.toJson()['token'],"receiver":widget.arguments['receiver']})));
+    });
   }
 
   @override
