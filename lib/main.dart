@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import './routes/mine.dart';
 import './routes/home.dart';
 import './routes/chat.dart';
+import './routes/imagepicker_test.dart';
 import './routes/chat_detail.dart';
 import './commom/global.dart';
 import 'package:myapp/states/themes.dart';
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
     '/chat': (context) => Chat(),
     '/mine': (context) => Mine(),
     '/chat_detail': (context,{arguments}) => ChatDetail(arguments:arguments),
+    '/imagepicker': (context,{arguments}) => ImagePickerWidget(arguments:arguments),
     '/': (context) => MyHomePage(routes: [Home(),Chat(),Mine()]),
   };
 

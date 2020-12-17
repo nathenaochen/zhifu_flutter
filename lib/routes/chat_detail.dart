@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/screenutil.dart';
 import 'package:myapp/commom/global.dart';
 import 'package:myapp/states/acount.dart';
+import 'package:myapp/states/token.dart';
+import 'package:myapp/states/username.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_socket_io/flutter_socket_io.dart';
@@ -21,6 +23,8 @@ class _ChatDetailState extends State<ChatDetail> {
   SocketIO socketIO;
   //消息列表
   List msgList = <Map>[];
+  //是否还有历史消息
+  bool isHidtroy = false;
   //输入消息
 //  String inputStr = '';
   //下拉刷新控制container
@@ -31,9 +35,9 @@ class _ChatDetailState extends State<ChatDetail> {
   ScrollController _scrollController = ScrollController(keepScrollOffset:false);
 
 //  @override
-//  bool get wantKeepAlive => true;
+//  bool get wantKeepAlive => true;  Global.profile.toJson()['token']
 
-
+//初始化
   @override
   void initState() {
     // TODO: implement initState
@@ -42,10 +46,11 @@ class _ChatDetailState extends State<ChatDetail> {
     _connectSocket01();
     //进入聊天详情页清除未读消息
     new Future.delayed(Duration(seconds: 1),(){
-      socketIO.sendMessage("updataunread", json.encode(({"sender":Global.profile.toJson()['token'],"receiver":widget.arguments['receiver']})));
+      socketIO.sendMessage("updataunread", json.encode(({"sender":context.read<TokenModel>().token ,"receiver":widget.arguments['receiver']})));
     });
   }
 
+  //卸载时生命周期回调
   @override
   void dispose() {
     super.dispose();
@@ -55,8 +60,9 @@ class _ChatDetailState extends State<ChatDetail> {
     _scrollController.dispose();
   }
 
+  //获取历史聊天记录
   Future<void> getChatHistroy() async {
-    Response response = await MyDio.mydio().post('http://39.99.174.23/apiService/forward/api',data: {"snType":'sas',"serviceName":'serviceName.chat.chatdetail',"senderKey": Global.profile.toJson()['token'],"receiverKey":widget.arguments['receiver']});
+    Response response = await MyDio.mydio().post('http://39.99.174.23/apiService/forward/api',data: {"snType":'sas',"serviceName":'serviceName.chat.chatdetail',"senderKey": context.read<TokenModel>().token,"receiverKey":widget.arguments['receiver']});
 //    print(1234);
     Map res = response.data;
 //    print(res['result']);
@@ -70,8 +76,9 @@ class _ChatDetailState extends State<ChatDetail> {
     });
   }
 
+  //连接socket
   _connectSocket01() {
-    socketIO = SocketIOManager().createSocketIO("http://39.99.174.23:3001", "/chat", query: "sender="+Global.profile.toJson()['token']+"&typeCon=detail&receiver="+widget.arguments['receiver']);
+    socketIO = SocketIOManager().createSocketIO("http://39.99.174.23:3001", "/chat", query: "sender="+context.read<TokenModel>().token+"&typeCon=detail&receiver="+widget.arguments['receiver']);
     //call init socket before doing anything
     socketIO.init();
     //subscribe event
@@ -80,6 +87,7 @@ class _ChatDetailState extends State<ChatDetail> {
     socketIO.connect();
   }
 
+  //订阅socket回调
   _onSocketInfo(dynamic data) {
     print( data);
     setState(() {
@@ -90,31 +98,38 @@ class _ChatDetailState extends State<ChatDetail> {
     });
   }
 
+  //发送信息
   void _sendChatMessage(String msg) async {
     if (socketIO != null) {
-      Map jsonData = {"sender":Global.profile.toJson()['token'],"receiver":widget.arguments['receiver'],"msg":msg,"receivername":widget.arguments['title'],"sendername":Global.profile.toJson()['username']};
+      Map jsonData = {"sender":context.read<TokenModel>().token,"receiver":widget.arguments['receiver'],"msg":msg,"receivername":widget.arguments['title'],"sendername":context.read<UsernameModel>().username};
       socketIO.sendMessage("message", json.encode((jsonData)));
     }
   }
 
+  //下拉刷新聊天记录
   Future<void> _getData() async {
 //    print(msgList[0]['createdate']);
     Response response = await MyDio.mydio().post('http://39.99.174.23/apiService/forward/api',
-        data: {"snType":'sas',"serviceName":'serviceName.chat.chatdetail',"senderKey": Global.profile.toJson()['token'],"receiverKey":widget.arguments['receiver'],'lastTime':msgList[0]['createdate']});
+        data: {"snType":'sas',"serviceName":'serviceName.chat.chatdetail',"senderKey": context.read<TokenModel>().token,"receiverKey":widget.arguments['receiver'],'lastTime':msgList[0]['createdate']});
     Map res = response.data;
-//    print(res['result']);
     List arr =  res['result'];
+//    print(arr.length);
     arr.sort((a, b) => (a['createdate']).compareTo(b['createdate']));
     var scrolltop = _scrollController.position.maxScrollExtent;
 //    print(12345);
 //    print(scrolltop);
-    setState(() {
-      msgList.insertAll(0, arr );
-      _refreshController.refreshCompleted();
-//      var stance = _scrollController.position.maxScrollExtent;;
-//      var jumpin =
-//      _scrollController.jumpTo( _scrollController.position.maxScrollExtent);
-    });
+    if(arr.length == 0){
+      setState(() {
+        isHidtroy = true;
+        _refreshController.refreshCompleted();
+      });
+    }else{
+      setState(() {
+        msgList.insertAll(0, arr );
+        _refreshController.refreshCompleted();
+      });
+    }
+
     Future.delayed(Duration(milliseconds: 100), (){
 //        print(_scrollController.position.maxScrollExtent);
 //        print(_scrollController.offset);
@@ -146,7 +161,7 @@ class _ChatDetailState extends State<ChatDetail> {
                         child: SmartRefresher(
                           enablePullDown: true,
                           controller: _refreshController,
-                          header: WaterDropHeader(complete: Text('刷新成功...',style: TextStyle(color: Colors.grey),)),
+                          header: WaterDropHeader(complete: Text(isHidtroy ? '没有个更多历史消息了' : '刷新成功...',style: TextStyle(color: Colors.grey),)),
                           onRefresh: _getData,
                           child:  ListView.builder(
                             itemCount: msgList.length,
@@ -158,11 +173,11 @@ class _ChatDetailState extends State<ChatDetail> {
                                 Container(
                                   margin:  EdgeInsets.only(bottom:ScreenUtil().setWidth(20)),
                                   child: Row(
-                                    mainAxisAlignment: msgList[index]['sender'] == Global.profile.toJson()['token'] ? MainAxisAlignment.end : MainAxisAlignment.start,
+                                    mainAxisAlignment: msgList[index]['sender'] == context.watch<TokenModel>().token ? MainAxisAlignment.end : MainAxisAlignment.start,
                                     children: <Widget>[
-                                      msgList[index]['receiver'] == Global.profile.toJson()['token'] ? Padding(padding: EdgeInsets.only(right: ScreenUtil().setWidth(20)),child: ClipOval(
+                                      msgList[index]['receiver'] == context.watch<TokenModel>().token ? Padding(padding: EdgeInsets.only(right: ScreenUtil().setWidth(20)),child: ClipOval(
                                         child: Image.network(
-                                          "http://39.99.174.23/common/images/header_"+msgList[index]['sender']+".jpg",
+                                          "http://39.99.174.23/zhifututor/common/images/"+msgList[index]['sender']+".png",
                                           width: ScreenUtil().setWidth(80),
                                           height: ScreenUtil().setWidth(80),
                                         ),
@@ -174,14 +189,14 @@ class _ChatDetailState extends State<ChatDetail> {
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.all(Radius.circular(ScreenUtil().setWidth(20))),
                                           border: new Border.all(width: 1, color: Colors.white),
-                                          color: msgList[index]['receiver'] == Global.profile.toJson()['token'] ? Colors.white : Colors.green,
+                                          color: msgList[index]['receiver'] == context.watch<TokenModel>().token ? Colors.white : Colors.green,
                                         ),
                                         padding: EdgeInsets.symmetric(vertical: ScreenUtil().setWidth(15), horizontal: ScreenUtil().setWidth(20)),
-                                        child: Text(msgList[index]['msg'],style: TextStyle(color: msgList[index]['receiver'] == Global.profile.toJson()['token'] ? Colors.black : Colors.white),),
+                                        child: Text(msgList[index]['msg'],style: TextStyle(color: msgList[index]['receiver'] == context.watch<TokenModel>().token ? Colors.black : Colors.white),),
                                       ),
-                                      msgList[index]['sender'] == Global.profile.toJson()['token'] ?  Padding(padding: EdgeInsets.only(left: ScreenUtil().setWidth(20)),child: ClipOval(
+                                      msgList[index]['sender'] == context.watch<TokenModel>().token ?  Padding(padding: EdgeInsets.only(left: ScreenUtil().setWidth(20)),child: ClipOval(
                                         child: Image.network(
-                                          "http://39.99.174.23/common/images/header_"+msgList[index]['sender']+".jpg",
+                                          "http://39.99.174.23/zhifututor/common/images/"+msgList[index]['sender']+".png",
                                           width: ScreenUtil().setWidth(80),
                                           height: ScreenUtil().setWidth(80),
                                         ),
@@ -215,8 +230,8 @@ class _ChatDetailState extends State<ChatDetail> {
                       ),
                     ),
                     Container(
-                      width: ScreenUtil().setWidth(125),
-                      height: ScreenUtil().setHeight(65),
+                      width: ScreenUtil().setWidth(140),
+                      height: ScreenUtil().setHeight(70),
                       child: RaisedButton(
                         child: Text('发送'),
                         disabledTextColor: Colors.blue,

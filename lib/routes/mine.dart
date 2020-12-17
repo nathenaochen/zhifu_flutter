@@ -43,14 +43,19 @@ class _MineState extends State<Mine>{
           child: Container(
             child: WebViewContainer(url:'http://39.99.174.23/zhifututor/build/me.html',hasAppbar:false, hasInput:false),
           ),
-        )
+        ),
 
 
 //      floatingActionButton: FloatingActionButton(
 //        onPressed: ()async{
-//          int num = await showdailogPeeling();
-//          print(num);
-//          context.read<ThemeModel>().theme = Global.themes[num].color;
+//
+//          //唤起相机测试逻辑
+//          Navigator.pushNamed(context,'/imagepicker');
+//
+//           //换肤逻辑
+////          int num = await showdailogPeeling();
+////          print(num);
+////          context.read<ThemeModel>().theme = Global.themes[num].color;
 ////          Provider.of<ThemeModel>(context).set();
 //        },
 ////        tooltip: 'Increment',

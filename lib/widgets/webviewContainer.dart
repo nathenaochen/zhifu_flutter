@@ -256,7 +256,7 @@ class WebViewContainerState extends State<WebViewContainer> with AutomaticKeepAl
           Navigator.pushNamed(context,data['url'].toString().split('?')[0], arguments: {'title':data['title'].toString(),'receiver':data['url'].toString().split('?')[1].split('=')[1].toString()});
 //          Navigator.pushNamed(context, "/chat_detail",arguments: {"param":"我是NewPage无状态组件参数"});
         }else{
-          Navigator.of(context).pushNamed(data['url'], arguments: json.encode({'title':data['title']}));
+          Navigator.of(context).pushNamed(data['url'], arguments: json.encode({'title':'沙克大家'}));
         }
       }else if(data['type'] == 2){
         Navigator.push(context,
